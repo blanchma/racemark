@@ -8,7 +8,13 @@ require 'objspace'
 
 module Racemark
   class << self
-    attr_accessor :global_stdout
+    attr_accessor :global_stdout, :reports
+
+    def race
+      @reports=[]
+      yield
+      compare
+    end
 
     def measure(name_algorithm="your_algorithm")
       stdout(false)
@@ -18,6 +24,8 @@ module Racemark
       report.bm = Benchmark.measure(name_algorithm) do |bm|
         yield
       end
+      GC.start
+      report.mem = ObjectSpace.memsize_of_all(RubyVM::InstructionSequence)
 
       Benchmark::Suite.create
       ips = Benchmark.ips do |bm|
@@ -26,11 +34,27 @@ module Racemark
         end
       end
       report.ips = ips.first
-      GC.start
-      report.mem = ObjectSpace.memsize_of_all(RubyVM::InstructionSequence)
 
       stdout(true)
-      report.print
+      @reports << report if @reports
+      report
+    end
+
+    def compare
+      if @reports.empty?
+        raise Exception.new("NoHorseException: a race without horses is not a race")
+      end
+
+      if @reports.count == 1
+        raise Exception.new("OnlyOneHorseException: a race requires at least two horses")
+      end
+
+      @horses = []
+      @reports.each do |report|
+        @horses = Horse.new report
+        report.print
+      end
+
     end
 
     def stdout(state)

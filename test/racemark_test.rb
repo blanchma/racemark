@@ -8,6 +8,9 @@ class RacemarkTest < MiniTest::Unit::TestCase
     measure = Racemark.measure do
       fast_fib(21)
     end
+    refute_nil measure.mem
+    refute_nil measure.bm
+    refute_nil measure.ips
   end
 
   def fast_fib(n)
